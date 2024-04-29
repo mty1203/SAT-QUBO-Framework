@@ -4,7 +4,7 @@ import os
 import multiprocessing as mp
 from multiprocessing import Pool
 import functools
-
+import re
 
 def create_solvable_formulas(num_variables, num_clauses, type, amount, output_directory):
 
@@ -81,3 +81,44 @@ def load_formula_from_dimacs_file(file_path):
                 # discard dimacs 0 at the end of each line ([:-1])
                 formula.append(list(map(lambda x: int(x), line.split(" ")))[:-1])
     return formula
+
+def load_file(file_path):
+    formula = []
+    number_of_vars = 0
+    number_of_clauses = 0
+    with open(file_path, "r") as file:
+        for line in file:
+            # read first line info
+            numbers = re.findall(r'\d+', line)
+            number_of_vars= int(numbers[0])
+            number_of_clauses = int(numbers[1])
+            if not line.startswith("p"):
+                formula.append(list(map(lambda x: int(x), line.split(" ")))[:-1])
+    return number_of_vars, number_of_clauses,formula
+
+def evaluate_cnf(cnf_formula, assignments):
+    """
+    Evaluate a CNF formula based on the given variable assignments.
+
+    :param cnf_formula: List of lists, where each inner list represents a clause.
+                        Variables are represented by integers, where positive
+                        integers indicate the variable itself and negative
+                        integers indicate the negation of the variable.
+    :param assignments: Dictionary of variable assignments where keys are variable
+                        indices (positive integers) and values are Boolean (True or False).
+    :return: True if the CNF formula is satisfied, False otherwise.
+    """
+    # Evaluate each clause in the formula
+    for clause in cnf_formula:
+        clause_satisfied = False
+        for variable in clause:
+            var_index = abs(variable)
+            value = assignments[var_index]
+            # Determine if the variable or its negation is True
+            if (variable > 0 and value) or (variable < 0 and not value):
+                clause_satisfied = True
+                break
+        if not clause_satisfied:
+            return False  # If any clause is unsatisfied, the formula is False
+    return True  # All clauses are satisfied
+
